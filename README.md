@@ -20,3 +20,11 @@ Well, you can also copy the screenshot to your clipboard or save it to your desk
 
 
 Have fun!
+
+
+# Development notes
+
+Built with Pyinstaller, please refer to ```./HoldMyBeer.spec```
+Deps: tkinter, pystray, mss, keyboard, pyperclipimg, pillow
+
+- TODO: Cleanup/Refactor HoldMyBeer.py as this was done in one night up til 4am based
