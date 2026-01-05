@@ -11,7 +11,7 @@
 
 OR ALTERNATIVELY
 
-- Right click the Hold my beer icon in your system tray and choose 'Capture region'
+- Right click the Hold My Beer icon in your system tray and choose 'Capture region'
 
 
 THATS ALL THERE IS!!!
