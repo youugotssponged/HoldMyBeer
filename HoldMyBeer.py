@@ -17,7 +17,7 @@ def capture_region():
             original_frozen_image = Image.frombytes("RGB", shot.size, shot.rgb)
             frozen_image = ImageEnhance.Brightness(
                 original_frozen_image
-            ).enhance(0.6)
+            ).enhance(0.75)
         
         root.after(
             0,
@@ -74,6 +74,8 @@ class RegionSelector:
         self.canvas.bind("<ButtonPress-1>", self.on_press)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
+        self.canvas.bind("<Escape>", lambda e: self.root.destroy())
+        self.root.focus_force()
 
     def remove_stale_highlight(self):
         if self.highlight_image_id is not None:
@@ -150,7 +152,6 @@ def show_image(img):
 
     window.title("Hold My Beer - Captured Region")
     window.config(menu=menu_bar)    
-    window.bind("<Escape>", lambda e: window.destroy())
     window.resizable(False, False)  # Disable window resizing
 
 def saveImage(image):
