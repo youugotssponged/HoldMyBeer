@@ -7,51 +7,78 @@ import os
 import pyperclipimg as pci
 
 from tkinter import filedialog
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw, ImageTk, ImageEnhance
 
-
-# ---------- Screenshot logic ----------
 def capture_region():
-    # Schedule overlay creation on the main Tkinter thread
-    if root:
-        root.after(0, lambda: RegionSelector(tk.Toplevel(root)))
-
-
-    #### Spongy note to self: tkinter isn't thread safe and this is just unneccessary! ####
-    # def run():
-    #    overlay = tk.Toplevel(root) 
-    #    RegionSelector(overlay)
-    # 
-    # threading.Thread(target=run, daemon=True).start() 
-    #######################################################################################
+    try:
+        with mss.mss() as sct:
+            monitor = sct.monitors[0]
+            shot = sct.grab(monitor)
+            original_frozen_image = Image.frombytes("RGB", shot.size, shot.rgb)
+            frozen_image = ImageEnhance.Brightness(
+                original_frozen_image
+            ).enhance(0.6)
+        
+        root.after(
+            0,
+            lambda: RegionSelector(
+                tk.Toplevel(root),
+                original_frozen_image,
+                frozen_image,
+                monitor
+            )
+        )
+    except Exception as e:
+        print(e)
 
 class RegionSelector:
-    def __init__(self, overlay):
+    def __init__(self, overlay, screenshot, screenshot_dimmed, monitor):
         self.root = overlay
+        self.screenshot = screenshot
+        self.screenshot_dimmed = screenshot_dimmed
+        self.highlight_image_id = None
+        self.highlight_tk_img = None
+
+        self.virtual_monitor = monitor
         self.start_x = self.start_y = 0
         self.rect = None
 
-        self.root.attributes("-alpha", 0.3)
         self.root.attributes("-topmost", True)
         self.root.overrideredirect(True)
         self.root.bind("<Escape>", lambda e: self.root.destroy())
         self.root.bind("<ButtonPress-3>", lambda e: self.root.destroy())
 
         # Get virtual monitor covering all screens
-        with mss.mss() as sct:
-            self.virtual_monitor = sct.monitors[0]
-
         # Make overlay cover all monitors
         self.root.geometry(
             f"{self.virtual_monitor['width']}x{self.virtual_monitor['height']}+{self.virtual_monitor['left']}+{self.virtual_monitor['top']}"
         )
 
-        self.canvas = tk.Canvas(self.root, bg="black", cursor="cross")
+        self.tk_bg = ImageTk.PhotoImage(self.screenshot_dimmed)
+        
+        self.canvas = tk.Canvas (
+            self.root, 
+            cursor="cross", 
+            highlightthickness=0
+        )
+
         self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.canvas.create_image (
+            0, 
+            0, 
+            image=self.tk_bg,
+            anchor="nw"
+        )
 
         self.canvas.bind("<ButtonPress-1>", self.on_press)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
+
+    def remove_stale_highlight(self):
+        if self.highlight_image_id is not None:
+            self.canvas.delete(self.highlight_image_id)
+            self.highlight_tk_img = None
 
     def on_press(self, event):
         self.start_x, self.start_y = event.x, event.y
@@ -60,6 +87,7 @@ class RegionSelector:
             event.x, event.y,
             outline="red", width=2
         )
+        self.remove_stale_highlight()
 
     def on_drag(self, event):
         self.canvas.coords(
@@ -67,31 +95,42 @@ class RegionSelector:
             self.start_x, self.start_y,
             event.x, event.y
         )
+        self.remove_stale_highlight()
+
+        x1, y1 = min(self.start_x, event.x), min(self.start_y, event.y)
+        x2, y2 = max(self.start_x, event.x), max(self.start_y, event.y)
+        w, h = int(x2 - x1), int(y2 - y1)
+
+        if w > 0 and h > 0:
+            bright_region = self.screenshot.crop((int(x1), int(y1), int(x2), int(y2)))
+            self.highlight_tk_img = ImageTk.PhotoImage(bright_region)
+            self.highlight_image_id = self.canvas.create_image(
+                int(x1), 
+                int(y1),
+                image=self.highlight_tk_img,
+                anchor="nw"
+            )
+            # force red outline visibility on top
+            self.canvas.tag_lower(self.highlight_image_id, self.rect)
 
     def on_release(self, event):
+        self.remove_stale_highlight()
+        
         x1, y1, x2, y2 = self.canvas.coords(self.rect)
 
-        # Convert coordinates relative to virtual monitor
-        left = int(min(x1, x2) + self.virtual_monitor['left'])
-        top = int(min(y1, y2) + self.virtual_monitor['top'])
-        width = int(abs(x2 - x1))
-        height = int(abs(y2 - y1))
+        # Convert coordinates
+        left = int(min(x1, x2))
+        top = int(min(y1, y2))
+        right = int(max(x1, x2))
+        bottom = int(max(y1, y2))
+
+        cropped = self.screenshot.crop (
+            (left, top, right, bottom)
+        )
 
         self.root.destroy()
-        grab_and_show(left, top, width, height)
-
-def grab_and_show(left, top, width, height):
-    with mss.mss() as sct:
-        monitor = {
-            "left": left,
-            "top": top,
-            "width": width,
-            "height": height,
-        }
-
-        shot = sct.grab(monitor)
-        img = Image.frombytes("RGB", shot.size, shot.rgb)
-        show_image(img)
+        show_image(cropped)
+        
 
 def show_image(img):
     window = tk.Toplevel(root)
@@ -123,8 +162,6 @@ def saveImage(image):
     if filename:
         image.save(filename)
 
-# ---------- Tray icon ----------
-
 def create_tray_icon():
     image = Image.new("RGB", (64, 64), "black")
     draw = ImageDraw.Draw(image)
@@ -146,12 +183,10 @@ def exit_app():
     root.destroy()
     os._exit(0)
 
-# ---------- Global hotkey ----------
-
 def setup_hotkey():
     keyboard.add_hotkey("alt+print_screen", capture_region)
 
-# ---------- Main ----------
+##################################################################################################################################
 
 tray_icon = None
 root = None # will act as the 'drawable overlay surface', hidden but allowing tk to spawn child windows for image preview
