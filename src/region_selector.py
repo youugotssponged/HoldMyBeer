@@ -1,35 +1,8 @@
-import threading
-import tkinter as tk
-import pystray
-import mss
-import keyboard
-import os
 import pyperclipimg as pci
+import tkinter as tk
 
 from tkinter import filedialog
-from PIL import Image, ImageDraw, ImageTk, ImageEnhance
-
-def capture_region():
-    try:
-        with mss.mss() as sct:
-            monitor = sct.monitors[0]
-            shot = sct.grab(monitor)
-            original_frozen_image = Image.frombytes("RGB", shot.size, shot.rgb)
-            frozen_image = ImageEnhance.Brightness(
-                original_frozen_image
-            ).enhance(0.75)
-        
-        root.after(
-            0,
-            lambda: RegionSelector(
-                tk.Toplevel(root),
-                original_frozen_image,
-                frozen_image,
-                monitor
-            )
-        )
-    except Exception as e:
-        print(e)
+from PIL import Image, ImageTk
 
 class RegionSelector:
     def __init__(self, overlay, screenshot, screenshot_dimmed, monitor):
@@ -131,76 +104,34 @@ class RegionSelector:
         )
 
         self.root.destroy()
-        show_image(cropped)
+        self.__show_image(cropped)
         
 
-def show_image(img):
-    window = tk.Toplevel(root)
+    def __show_image(self, img):
+        window = tk.Toplevel(self.root.master)
 
-    menu_bar = tk.Menu(window)
-    file_menu = tk.Menu(menu_bar, tearoff=False)
+        menu_bar = tk.Menu(window)
+        file_menu = tk.Menu(menu_bar, tearoff=False)
 
-    menu_bar.add_cascade(label="File", menu = file_menu)
-    file_menu.add_command(label="Copy to clipboard", command = lambda: pci.copy(img))
-    file_menu.add_command(label='Save As', command = lambda: saveImage(image=img))
-    file_menu.add_command(label='Exit', command = window.destroy)
-    
-    tk_img = ImageTk.PhotoImage(img)    
-    label = tk.Label(window, image=tk_img)
-    label.image = tk_img
-    label.pack()
+        menu_bar.add_cascade(label="File", menu = file_menu)
+        file_menu.add_command(label="Copy to clipboard", command = lambda: pci.copy(img))
+        file_menu.add_command(label='Save As', command = lambda: self.__saveImage(image=img))
+        file_menu.add_command(label='Exit', command = window.destroy)
+        
+        tk_img = ImageTk.PhotoImage(img)    
+        label = tk.Label(window, image=tk_img)
+        label.image = tk_img
+        label.pack()
 
-    window.title("Hold My Beer - Captured Region")
-    window.config(menu=menu_bar)    
-    window.resizable(False, False)  # Disable window resizing
+        window.title("Hold My Beer - Captured Region")
+        window.config(menu=menu_bar)    
+        window.resizable(False, False)
 
-def saveImage(image):
-    filename = filedialog.asksaveasfilename (
-        defaultextension=".png",
-        filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")]
-    )
+    def __saveImage(self, image):
+        filename = filedialog.asksaveasfilename (
+            defaultextension=".png",
+            filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")]
+        )
 
-    if filename:
-        image.save(filename)
-
-def create_tray_icon():
-    image = Image.new("RGB", (64, 64), "black")
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((16, 16, 48, 48), outline="red", width=4)
-
-    menu = pystray.Menu(
-        pystray.MenuItem("Capture Region", lambda _: capture_region()),
-        pystray.MenuItem("Exit", lambda _: exit_app())
-    )
-
-    icon = pystray.Icon("screenshot", image, "Hold My Beer (Screenshot tool) by @youugotssponged", menu)
-    global tray_icon
-    tray_icon = icon
-    icon.run()
-
-def exit_app():
-    keyboard.unhook_all()
-    tray_icon.stop()
-    root.destroy()
-    os._exit(0)
-
-def setup_hotkey():
-    keyboard.add_hotkey("alt+print_screen", capture_region)
-
-##################################################################################################################################
-
-tray_icon = None
-root = None # will act as the 'drawable overlay surface', hidden but allowing tk to spawn child windows for image preview
-
-def main():
-    global root
-    root = tk.Tk()
-    root.withdraw()
-
-    setup_hotkey()
-    threading.Thread(target=create_tray_icon, daemon=True).start() # to stop pystray Icon method call from blocking the main thread when creating the tray icon on windows
-    
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
+        if filename:
+            image.save(filename)

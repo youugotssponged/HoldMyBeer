@@ -12,8 +12,8 @@ datas = collect_data_files('pyperclipimg')
 block_cipher = None
 
 a = Analysis(
-    ['HoldMyBeer.py'],         # your script
-    pathex=[],
+    ['src/HoldMyBeer.py'],         
+    pathex=['src'],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,

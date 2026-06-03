@@ -1,30 +1,29 @@
 # Hold My Beer
-## Super lightweight simple screenshot utility 
-### Made for Windows & for a friend who wanted something slightly different than other screenshot tools
 
-## To use
-- Double click HoldMyBeerScreenshot.exe, notice that it has now started silently and populated in your icon tray on your windows taskbar on the bottom right.
+A lightweight, no-fuss screenshot utility for Windows that lives in your system tray. Press **Alt + Print Screen**, drag to select, and you're done — no splash screens, no config dialogs, no bloat.
 
-- ALT + PRINTSCREEN to activate the screenshot overlay
-    - Click and drag to take a screenshot
-    - ESC or Right Click to cancel
+## Features
 
-OR ALTERNATIVELY
+- **Instant region capture** — `Alt + Print Screen` triggers a full-screen dimmed overlay; click and drag to select any area
+- **Live preview** — selected region is brightened in real time against the dimmed background
+- **Cancel anytime** — press `Esc` or right-click to dismiss
+- **System tray daemon** — starts silently, runs in the background, accessible from the notification area
+- **Clipboard or file** — captured regions can be copied directly to clipboard (`pyperclipimg`) or saved to disk as PNG/JPEG
+- **Multi-monitor aware** — overlay spans all monitors using a virtual screen coordinate space
 
-- Right click the Hold My Beer icon in your system tray and choose 'Capture region'
+## Usage
 
+1. Launch `HoldMyBeerScreenshot.exe` — it minimises to the system tray.
+2. Press **Alt + Print Screen** (or right-click the tray icon → *Capture Region*).
+3. Click and drag to select a region; release to capture.
+4. In the preview window, use **File → Copy to clipboard** or **File → Save As**.
 
-THATS ALL THERE IS!!!
+## Development
 
-Well, you can also copy the screenshot to your clipboard or save it to your desktop with the copy and save options found at the top of the screenshot window.
+Built with Python and packaged via PyInstaller. See `HoldMyBeer.spec` for build configuration.
 
+**Dependencies:** `tkinter`, `pystray`, `mss`, `keyboard`, `pyperclipimg`, `pillow`
 
-Have fun!
-
-
-# Development notes
-
-Built with Pyinstaller, please refer to ```./HoldMyBeer.spec```
-Deps: tkinter, pystray, mss, keyboard, pyperclipimg, pillow
-
-- TODO: Cleanup/Refactor HoldMyBeer.py as this was done in one night up til 4am based
+```bash
+pip install pystray mss keyboard pyperclipimg pillow
+```
